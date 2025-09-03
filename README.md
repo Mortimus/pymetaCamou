@@ -1,4 +1,7 @@
 # PyMeta
+
+Updated to use Camoufox
+
 <p align="left">
   <img src="https://img.shields.io/badge/License-GPL%203.0-green.svg"/>&nbsp;
   <a href="https://www.twitter.com/m8sec">

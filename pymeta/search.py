@@ -1,9 +1,10 @@
 import os
 import re
-import sys
 import logging
+import requests
 import threading
 from time import sleep
+from random import choice
 from pymeta.logger import Log
 from bs4 import BeautifulSoup
 from tldextract import extract
@@ -60,7 +61,7 @@ class PyMeta:
         with Camoufox(headless=True) as browser:
             while search_timer.running:
                 try:
-                    url = self.url[self.search_engine].format(self.target, len(self.results))
+                    url = self.url[self.search_engine].format(self.target, self.file_type, len(self.results))
                     page = browser.new_page()
                     response = page.goto(url, timeout=self.conn_timeout * 100000)
                     
@@ -129,30 +130,41 @@ def clean_filename(filename):
 def download_file(url, dwnld_dir, timeout=6):
     try:
         logging.debug('Downloading: {}'.format(url))
-        with Camoufox(headless=True) as browser:
-            page = browser.new_page()
-            response = page.goto(url, timeout=timeout * 1000)
-            if response is None:
-                Log.fail('Download Failed (no response) - {}'.format(url))
-                return
+        response = requests.get(url, headers={'User-Agent':get_agent()}, verify=False, timeout=timeout)
+        http_code = get_statuscode(response)
 
-            http_code = response.status
-            if http_code != 200:
-                Log.fail('Download Failed ({}) - {}'.format(http_code, url))
-                page.close()
-                return
+        if http_code != 200:
+            Log.fail('Download Failed ({}) - {}'.format(http_code, url))
+            return
 
-            content = page.content()
-            filename = clean_filename(url.split("/")[-1])
-            with open(os.path.join(dwnld_dir, filename), 'wb') as f:
-                if isinstance(content, str):
-                    f.write(content.encode('utf-8'))
-                else:
-                    f.write(content)
-            page.close()
+        with open(os.path.join(dwnld_dir, clean_filename(url.split("/")[-1])), 'wb') as f:
+            f.write(response.content)
     except Exception as e:
         logging.debug("Download Error: {}".format(e))
         pass
+
+def get_agent():
+    return choice([
+        '''Mozilla/5.0 (Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0''',
+        '''Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:57.0) Gecko/20100101 Firefox/57.0''',
+        '''Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:56.0) Gecko/20100101 Firefox/56.0''',
+        '''Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36 OPR/47.0.2631.55''',
+        '''Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.75 Safari/537.36''',
+        '''Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36''',
+        '''Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.108 Safari/537.36''',
+        '''Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36''',
+        '''Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36''',
+        '''Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/604.3.5 (KHTML, like Gecko) Version/11.0.1 Safari/604.3.5''',
+        '''Mozilla/5.0 (Windows NT 10.0; WOW64; rv:56.0) Gecko/20100101 Firefox/63.0''',
+        '''Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36 OPR/69.0.3686.57''',
+        '''Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36 Edge/15.15063''',
+        '''Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36 Edge/16.16299''',
+        ''''Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0''',
+        '''Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:58.0) Gecko/20100101 Firefox/58.0''',
+        '''Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:78.0) Gecko/20100101 Firefox/78.0''',
+        '''Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko''',
+        '''Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36''',
+        '''Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'''])
 
 def extract_links(resp):
     links = []

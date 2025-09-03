@@ -3,16 +3,21 @@ import logging
 from pymeta.logger import Log
 from pymeta.search import clean_filename
 from subprocess import getoutput
-from shutil import move
+from shutil import move, which
 
 
 def exif_check():
-    # Check exiftool installed
+    # Check exiftool installed and auto-find its path
+    exiftool_path = which('exiftool')
+    if not exiftool_path:
+        Log.warn("ExifTool not installed or not found in PATH, closing.")
+        exit(0)
     try:
-        float(getoutput('exiftool -ver'))
+        version = getoutput(f'{exiftool_path} -ver')
+        float(version)
         return True
-    except:
-        Log.warn("ExifTool not installed, closing.")
+    except Exception as e:
+        Log.warn(f"ExifTool version parse failed: {e}")
         exit(0)
 
 
