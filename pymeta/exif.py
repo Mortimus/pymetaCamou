@@ -9,6 +9,9 @@ from shutil import move, which
 def exif_check():
     # Check exiftool installed and auto-find its path
     exiftool_path = which('exiftool')
+    # Arch 'fix'
+    if not exiftool_path and os.path.exists('/usr/bin/vendor_perl/exiftool'):
+        exiftool_path = '/usr/bin/vendor_perl/exiftool'
     if not exiftool_path:
         Log.warn("ExifTool not installed or not found in PATH, closing.")
         exit(0)
